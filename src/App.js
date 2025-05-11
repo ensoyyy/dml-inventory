@@ -6,16 +6,23 @@ function RoleSelection() {
   const navigate = useNavigate();
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <h1 className="text-2xl font-bold mb-6">Select Your Role</h1>
+      <img src="University-of-San-Carlos-Logo.png" alt="University of San Carlos Logo" className="absolute top-2 left-6 w-64 h-32 object-contain" />
+      <img src="Cpelogo.png" alt="Computer Engineering Logo" className="absolute top-6 left-56 w-48 h-24 object-contain" />
+      <h1 className="text-6xl font-extrabold mt-0 mb-16 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 bg-clip-text text-transparent tracking-wide drop-shadow-lg">
+        Digital Microprocessors Laboratory
+      </h1>
+      <h1 className="text-4xl font-extrabold mb-8 mt-0 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 bg-clip-text text-transparent tracking-wide drop-shadow-lg">
+        Select Your Role
+      </h1>
       <div className="space-x-4">
         <button
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-6 py-2 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 text-white rounded shadow-md hover:brightness-110 transition-all duration-200"
           onClick={() => navigate('/user')}
         >
           Student
         </button>
         <button
-          className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          className="px-6 py-2 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 text-white rounded shadow-md hover:brightness-110 transition-all duration-200"
           onClick={() => navigate('/admin')}
         >
           Lab Manager
@@ -70,8 +77,9 @@ function UserDashboard({ items, borrowRequests, onBorrowRequest }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4">Student Dashboard</h2>
+    <div className="relative max-w-4xl mx-auto p-6 bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 min-h-screen">
+      <img src="CPELOGO2.png" alt="Computer Engineering Logo 2" className="absolute top-8 right-4 w-81 h-81 object-contain z-10" />
+      <h2 className="text-2xl font-bold mb-4 text-white">Student Dashboard</h2>
       {alerts.length > 0 && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded">
           {alerts.map((alert, i) => (
@@ -160,7 +168,7 @@ function UserDashboard({ items, borrowRequests, onBorrowRequest }) {
         </div>
       )}
       <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-2">Your Borrow Requests</h3>
+        <h3 className="text-2xl font-bold mb-4 text-white">Your Borrow Requests</h3>
         <ul className="space-y-2">
           {borrowRequests.filter(r => r.studentName === studentName).map(req => (
             <li key={req.id} className="p-3 bg-gray-100 rounded">
@@ -177,6 +185,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
   const [notification, setNotification] = useState('');
   const [alerts, setAlerts] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [editItem, setEditItem] = useState(null);
   const [newItem, setNewItem] = useState({
     name: '',
     category: '',
@@ -185,7 +194,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
     lastChecked: new Date().toISOString().split('T')[0]
   });
   const [showAddForm, setShowAddForm] = useState(false);
-  const categories = ['Equipment', 'Glassware', 'Consumables', 'Safety', 'Chemicals', 'Tools', 'Other'];
+  const categories = ['IC', 'Equipment', 'Device', 'Other'];
 
   useEffect(() => {
     // Show alerts for due/overdue items for all students
@@ -226,35 +235,69 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
       setNotification('Please fill out all required fields.');
       return;
     }
-    setItems(prev => [
-      ...prev,
-      {
-        id: prev.length > 0 ? Math.max(...prev.map(item => item.id)) + 1 : 1,
-        ...newItem
-      }
-    ]);
-    setNewItem({ name: '', category: '', quantity: 0, location: '', lastChecked: new Date().toISOString().split('T')[0] });
-    setShowAddForm(false);
-    setNotification('Item added!');
-    setTimeout(() => setNotification(''), 2000);
+    fetch('http://localhost:5000/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem),
+    })
+      .then(res => res.json())
+      .then(addedItem => {
+        setItems(prev => [...prev, addedItem]);
+        setNewItem({ name: '', category: '', quantity: 0, location: '', lastChecked: new Date().toISOString().split('T')[0] });
+        setShowAddForm(false);
+        setNotification('Item added!');
+        setTimeout(() => setNotification(''), 2000);
+      })
+      .catch(() => setNotification('Failed to add item.'));
   };
   const handleEditItem = (id, field, value) => {
+    if (editingId === id) {
+      setEditItem(prev => ({ ...prev, [field]: value }));
+    }
     setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
   const handleSaveEdit = (id) => {
-    setEditingId(null);
-    setNotification('Item updated!');
-    setTimeout(() => setNotification(''), 2000);
+    // Always convert lastChecked to YYYY-MM-DD before sending
+    const itemToSave = { ...editItem };
+    if (itemToSave.lastChecked && itemToSave.lastChecked.includes('T')) {
+      itemToSave.lastChecked = itemToSave.lastChecked.split('T')[0];
+    }
+    fetch(`http://localhost:5000/api/items/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itemToSave),
+    })
+      .then(res => res.json())
+      .then(() => {
+        setEditingId(null);
+        setEditItem(null);
+        setNotification('Item updated!');
+        setTimeout(() => setNotification(''), 2000);
+      })
+      .catch(() => setNotification('Failed to update item.'));
   };
   const handleDeleteItem = (id) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-    setNotification('Item deleted!');
-    setTimeout(() => setNotification(''), 2000);
+    fetch(`http://localhost:5000/api/items/${id}`, {
+      method: 'DELETE',
+    })
+      .then(res => res.json())
+      .then(() => {
+        setItems(prev => prev.filter(item => item.id !== id));
+        setNotification('Item deleted!');
+        setTimeout(() => setNotification(''), 2000);
+      })
+      .catch(() => setNotification('Failed to delete item.'));
+  };
+
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditItem({ ...item });
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4">Lab Manager Dashboard</h2>
+    <div className="relative max-w-4xl mx-auto p-6 bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 min-h-screen">
+      <img src="CPELOGO2.png" alt="Computer Engineering Logo 2" className="absolute top-8 right-4 w-81 h-81 object-contain z-10" />
+      <h2 className="text-2xl font-bold mb-4 text-white">Lab Manager Dashboard</h2>
       {alerts.length > 0 && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded">
           {alerts.map((alert, i) => (
@@ -263,7 +306,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
         </div>
       )}
       {notification && <div className="mb-4 p-3 bg-blue-100 text-blue-800 rounded">{notification}</div>}
-      <h3 className="text-lg font-semibold mb-2">Borrow Requests</h3>
+      <h3 className="text-2xl font-bold mb-4 text-white">Borrow Requests</h3>
       <ul className="space-y-2 mb-8">
         {borrowRequests.length === 0 && <li className="text-gray-500">No requests yet.</li>}
         {borrowRequests.map(req => (
@@ -387,7 +430,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
                       <input
                         type="text"
                         className="w-full px-2 py-1 border border-gray-300 rounded"
-                        value={item.name}
+                        value={editingId === item.id ? editItem?.name : item.name}
                         onChange={e => handleEditItem(item.id, 'name', e.target.value)}
                       />
                     ) : (
@@ -398,7 +441,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
                     {editingId === item.id ? (
                       <select
                         className="w-full px-2 py-1 border border-gray-300 rounded"
-                        value={item.category}
+                        value={editingId === item.id ? editItem?.category : item.category}
                         onChange={e => handleEditItem(item.id, 'category', e.target.value)}
                       >
                         {categories.map(category => (
@@ -415,8 +458,8 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
                         type="number"
                         min="0"
                         className="w-full px-2 py-1 border border-gray-300 rounded"
-                        value={item.quantity}
-                        onChange={e => handleEditItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                        value={editingId === item.id ? editItem?.quantity : item.quantity}
+                        onChange={e => handleEditItem(item.id, 'quantity', e.target.value)}
                       />
                     ) : (
                       item.quantity
@@ -427,7 +470,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
                       <input
                         type="text"
                         className="w-full px-2 py-1 border border-gray-300 rounded"
-                        value={item.location}
+                        value={editingId === item.id ? editItem?.location : item.location}
                         onChange={e => handleEditItem(item.id, 'location', e.target.value)}
                       />
                     ) : (
@@ -439,7 +482,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
                       <input
                         type="date"
                         className="w-full px-2 py-1 border border-gray-300 rounded"
-                        value={item.lastChecked}
+                        value={editingId === item.id ? editItem?.lastChecked : item.lastChecked}
                         onChange={e => handleEditItem(item.id, 'lastChecked', e.target.value)}
                       />
                     ) : (
@@ -468,7 +511,7 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
                       <div className="flex space-x-2">
                         <button
                           className="p-1 text-blue-600 hover:text-blue-800"
-                          onClick={() => setEditingId(item.id)}
+                          onClick={() => startEdit(item)}
                           title="Edit"
                         >
                           <Edit size={18} />
@@ -489,19 +532,36 @@ function AdminDashboard({ items, setItems, borrowRequests, setBorrowRequests }) 
           </table>
         </div>
       </div>
+      {/* Inventory Summary Section */}
+      <div className="mt-10">
+        <h3 className="text-2xl font-bold mb-4 text-white">Inventory Summary</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-blue-50 p-6 rounded-lg shadow flex flex-col items-center">
+            <span className="text-lg font-semibold text-blue-700 mb-2">Total Items</span>
+            <span className="text-4xl font-bold text-blue-600">{items.length}</span>
+          </div>
+          <div className="bg-green-50 p-6 rounded-lg shadow flex flex-col items-center">
+            <span className="text-lg font-semibold text-green-700 mb-2">Total Quantity</span>
+            <span className="text-4xl font-bold text-green-600">{items.reduce((sum, item) => sum + Number(item.quantity), 0)}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function App() {
   // Shared inventory and borrow requests state
-  const [items, setItems] = useState([
-    { id: 1, name: 'PIC16F77A', category: 'Equipment', quantity: 5, location: 'Cabinet A', lastChecked: '2025-04-15' },
-    { id: 2, name: '74LS08', category: 'Equipment', quantity: 50, location: 'Drawer B', lastChecked: '2025-04-20' },
-    { id: 3, name: '74LS48', category: 'Equipment', quantity: 8, location: 'Shelf C', lastChecked: '2025-04-12' },
-    { id: 4, name: '74LS04', category: 'Equipment', quantity: 100, location: 'Storage D', lastChecked: '2025-05-01' },
-  ]);
+  const [items, setItems] = useState([]);
   const [borrowRequests, setBorrowRequests] = useState([]);
+
+  // Fetch items from backend API on mount
+  useEffect(() => {
+    fetch('http://localhost:5000/api/items')
+      .then(res => res.json())
+      .then(data => setItems(data))
+      .catch(err => console.error('Failed to fetch items:', err));
+  }, []);
 
   // Handler for student borrow requests
   const handleBorrowRequest = (item, studentName, dueDate) => {
